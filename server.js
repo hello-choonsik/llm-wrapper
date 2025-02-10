@@ -1,4 +1,3 @@
-// https://expressjs.com/
 require("dotenv").config();
 
 const express = require("express");
@@ -17,6 +16,7 @@ app.post("/", async (req, res) => {
   const TOGETHER_BASE_URL = "https://api.together.xyz";
   const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
   const TURBO_MODEL = "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free";
+  const GROQ_LLAMA_MODEL = "llama3-70b-8192";
   const FLUX_MODEL = "black-forest-labs/FLUX.1-schnell-Free";
   const MIXTRAL_MODEL = "mixtral-8x7b-32768";
   const DEEPSEEK_MODEL = "deepseek-ai/DeepSeek-R1-Distill-Llama-70B-free";
@@ -75,13 +75,15 @@ app.post("/", async (req, res) => {
   // 2-1. 이미지를 생성하는 프롬프트
   // llama-3-3-70b-free (together) -> 속도 측면
   const prompt = await callAI({
-    url: `${TOGETHER_BASE_URL}/v1/chat/completions`,
-    apiKey: TOGETHER_API_KEY,
-    model: TURBO_MODEL,
+    // url: `${TOGETHER_BASE_URL}/v1/chat/completions`,
+    // apiKey: TOGETHER_API_KEY,
+    // model: TURBO_MODEL,
+    url: GROQ_URL,
+    apiKey: GROQ_API_KEY,
+    model: GROQ_LLAMA_MODEL,
     // text,
     text: `${text}를 바탕으로 맛집 추천에 어울리는 AI 이미지 생성을 위한 200자 이내의 영어 프롬프트를 작성해줘`,
   }).then((res) => res.choices[0].message.content);
-
   // 2-2. 그거에서 프롬프트만 JSON으로 추출
   // mixtral-8x7b-32768	(groq)
   const promptJSON = await callAI({
@@ -106,13 +108,15 @@ app.post("/", async (req, res) => {
   // 3-1. 설명을 생성하는 프롬프트
   // llama-3-3-70b-free (together)
   const prompt2 = await callAI({
-    url: `${TOGETHER_BASE_URL}/v1/chat/completions`,
-    apiKey: TOGETHER_API_KEY,
-    model: TURBO_MODEL,
+    // url: `${TOGETHER_BASE_URL}/v1/chat/completions`,
+    // apiKey: TOGETHER_API_KEY,
+    // model: TURBO_MODEL,
+    url: GROQ_URL,
+    apiKey: GROQ_API_KEY,
+    model: GROQ_LLAMA_MODEL,
     // text,
     text: `${text}를 바탕으로 맛집 추천에 어울리는 설명 생성을 위한 200자 이내의 한글 프롬프트를 작성해줘`,
   }).then((res) => res.choices[0].message.content);
-
   // 3-2. 그거에서 프롬프트만 추출
   // mixtral-8x7b-32768 (groq)
   const promptJSON2 = await callAI({
@@ -123,15 +127,13 @@ app.post("/", async (req, res) => {
     text: `${prompt2}에서 reasoning을 위해 작성된 200자 이내의 한글 프롬프트를 JSON Object로 prompt라는 key로 JSON string으로 ouput해줘`,
     jsonMode: true,
   }).then((res) => JSON.parse(res.choices[0].message.content).prompt);
-
   // 3-3. 그걸로 thinking 사용해서 설명을 작성
   // DeepSeek-R1-Distill-Llama-70B-free (together)
   const desc = await callAI({
     url: `${TOGETHER_BASE_URL}/v1/chat/completions`,
     apiKey: TOGETHER_API_KEY,
     model: DEEPSEEK_MODEL,
-    // text,
-    text: promptJSON2,
+    text: `${promptJSON2}를 바탕으로 한글로 설명을 작성해줘. 마크다운 문법을 제거하고 엔터로 줄바꿈을 넣어줘.`,
     max_tokens: 2048,
   }).then((res) => res.choices[0].message.content.split("</think>")[1]);
 
